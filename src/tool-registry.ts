@@ -5,7 +5,7 @@
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js"
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js"
-import { zodToJsonSchema } from "zod-to-json-schema"
+import { z } from "zod"
 import type { LawApiClient } from "./lib/api-client.js"
 import type { McpTool } from "./lib/types.js"
 import { formatToolError } from "./lib/errors.js"
@@ -483,31 +483,10 @@ export const allTools: McpTool[] = [
 /**
  * ZodEffects(.refine(), .transform() 등)를 벗겨내고 내부 ZodObject를 반환
  */
-function unwrapZodEffects(schema: unknown): unknown {
-  let current: any = schema
-  // ZodEffects 체인을 따라가며 innerType 추출 (최대 10단계)
-  for (let i = 0; i < 10; i++) {
-    if (current?._def?.typeName === "ZodEffects" && current._def.schema) {
-      // zod v3: _def.schema 에 내부 스키마 존재
-      current = current._def.schema
-    } else if (typeof current?.innerType === "function") {
-      // 일부 zod 버전에서는 innerType() 메서드로 접근
-      current = current.innerType()
-    } else {
-      break
-    }
-  }
-  return current
-}
-
 function toMcpInputSchema(schema: unknown) {
-  // .refine()이 적용된 스키마(ZodEffects)는 zodToJsonSchema가
-  // 내부 객체 구조를 제대로 노출하지 못할 수 있으므로 먼저 unwrap
-  const unwrapped = unwrapZodEffects(schema)
-  const rawSchema = zodToJsonSchema(unwrapped as any, { $refStrategy: "none" }) as any
+  // Zod v4: z.toJSONSchema()로 직접 변환 (zod-to-json-schema는 Zod v4 미지원)
+  const rawSchema = z.toJSONSchema(schema as z.ZodType) as any
 
-  // 일부 커넥터는 $schema/$ref가 포함된 스키마를 축약 처리해 선택 파라미터를 누락시키므로
-  // MCP에서 필요한 핵심 필드만 노출합니다.
   if (rawSchema?.type === "object" && rawSchema?.properties) {
     // apiKey는 LLM이 사용할 필요 없는 내부 파라미터 — 토큰 절약을 위해 제거
     const props = { ...rawSchema.properties }
