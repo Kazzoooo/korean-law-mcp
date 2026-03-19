@@ -85,10 +85,38 @@ async function findLaws(
         lawType: extractTag(content, "법령구분명"),
       })
     }
+
+    // 쿼리와 법령명 관련도 기반 정렬 (정확 매칭 > 부분 매칭 > 나머지)
+    if (results.length > 1) {
+      const queryWords = query.replace(/\s*(시행령|시행규칙|별표|판례|개정|체계|3단|구조|절차|비용|처벌|기준|허가|신청)\s*/g, " ")
+        .trim().split(/\s+/).filter(w => w.length > 0)
+      results.sort((a, b) => {
+        const scoreA = scoreLawRelevance(a.lawName, query, queryWords)
+        const scoreB = scoreLawRelevance(b.lawName, query, queryWords)
+        return scoreB - scoreA
+      })
+    }
+
     return results
   } catch {
     return []
   }
+}
+
+/** 쿼리 대비 법령명 관련도 점수 (높을수록 관련) */
+function scoreLawRelevance(lawName: string, query: string, queryWords: string[]): number {
+  let score = 0
+  // 정확 매칭: 쿼리가 법령명을 포함
+  if (query.includes(lawName)) score += 100
+  // 법령명이 쿼리를 포함
+  if (lawName.includes(query.replace(/\s+/g, ""))) score += 80
+  // 단어 매칭
+  for (const w of queryWords) {
+    if (lawName.includes(w)) score += 10
+  }
+  // 법률 > 시행령 > 시행규칙 우선순위
+  if (!/시행령|시행규칙/.test(lawName)) score += 5
+  return score
 }
 
 function detectExpansions(query: string): ExpansionType[] {

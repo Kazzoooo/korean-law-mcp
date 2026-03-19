@@ -28,20 +28,21 @@ export async function compareArticles(
   input: CompareArticlesInput
 ): Promise<{ content: Array<{ type: string, text: string }>, isError?: boolean }> {
   try {
-    // Fetch both articles
-    const result1 = await getLawText(apiClient, {
-      mst: input.law1.mst,
-      lawId: input.law1.lawId,
-      jo: input.law1.jo,
-      apiKey: input.apiKey
-    })
-
-    const result2 = await getLawText(apiClient, {
-      mst: input.law2.mst,
-      lawId: input.law2.lawId,
-      jo: input.law2.jo,
-      apiKey: input.apiKey
-    })
+    // Fetch both articles in parallel
+    const [result1, result2] = await Promise.all([
+      getLawText(apiClient, {
+        mst: input.law1.mst,
+        lawId: input.law1.lawId,
+        jo: input.law1.jo,
+        apiKey: input.apiKey
+      }),
+      getLawText(apiClient, {
+        mst: input.law2.mst,
+        lawId: input.law2.lawId,
+        jo: input.law2.jo,
+        apiKey: input.apiKey
+      }),
+    ])
 
     // Check for errors
     if (result1.isError) {

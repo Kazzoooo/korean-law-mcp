@@ -61,8 +61,8 @@ export async function getLegalTermKB(
       output += `\n`;
     }
 
-    output += `\n💡 상세 정의: get_legal_term_detail(termId="ID")`;
-    output += `\n💡 일상용어 연계: get_term_daily_link(term="용어명")`;
+    output += `\n💡 상세 정의: get_legal_term_detail(query="용어명")`;
+    output += `\n💡 일상용어 연계: get_term_daily_link(query="용어명")`;
 
     return { content: [{ type: "text", text: output }] };
   } catch (error) {

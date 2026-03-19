@@ -5,6 +5,7 @@
 import { z } from "zod"
 import type { LawApiClient } from "../lib/api-client.js"
 import { parseThreeTierDelegation } from "../lib/three-tier-parser.js"
+import { cleanHtml } from "../lib/article-parser.js"
 
 export const GetThreeTierSchema = z.object({
   mst: z.string().optional().describe("법령일련번호"),
@@ -79,15 +80,7 @@ export async function getThreeTier(
         resultText += `\n`
 
         if (delegation.content) {
-          // HTML 태그 제거 (cleanHtml과 동일 순서)
-          const cleanContent = delegation.content
-            .replace(/<[^>]+>/g, '')
-            .replace(/&nbsp;/g, ' ')
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>')
-            .replace(/&quot;/g, '"')
-            .replace(/&amp;/g, '&')
-            .trim()
+          const cleanContent = cleanHtml(delegation.content)
 
           // 너무 길면 줄 경계에서 자르기 (위임 내용은 법적으로 중요하므로 500자)
           if (cleanContent.length > 500) {

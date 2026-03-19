@@ -246,7 +246,6 @@ export function parseThreeTierDelegation(jsonData: any): ThreeTierData {
       kndType: "위임조문",
     }
   } catch (error) {
-    console.error("위임조문 3단비교 파싱 오류:", error)
     throw error
   }
 }

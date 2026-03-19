@@ -4,6 +4,7 @@
 
 import { z } from "zod"
 import type { LawApiClient } from "../lib/api-client.js"
+import { cleanHtml } from "../lib/article-parser.js"
 
 export const GetOrdinanceSchema = z.object({
   ordinSeq: z.string().describe("자치법규 일련번호"),
@@ -45,34 +46,30 @@ export async function getOrdinance(
 
     resultText += `\n━━━━━━━━━━━━━━━━━━━━━━\n\n`
 
-    // 조문 내용
-    const articles = lawService.조문?.조 || []
+    // 조문 내용 (단일 객체 → 배열 정규화)
+    const rawArticles = lawService.조문?.조
+    const articles = Array.isArray(rawArticles) ? rawArticles : rawArticles ? [rawArticles] : []
 
-    if (Array.isArray(articles)) {
-      const maxArticles = Math.min(articles.length, 10)
-
-      for (let i = 0; i < maxArticles; i++) {
-        const article = articles[i]
-
-        if (article.조제목) {
-          resultText += `${article.조제목}\n`
+    if (articles.length > 0) {
+      // 대형 조례(20개 초과): TOC 반환 (law-text.ts 패턴)
+      if (articles.length > 20) {
+        const tocItems: string[] = []
+        for (const article of articles) {
+          if (article.조제목) tocItems.push(article.조제목)
         }
-
-        if (article.조내용) {
-          const content = article.조내용
-            .replace(/<[^>]+>/g, '')
-            .replace(/&nbsp;/g, ' ')
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>')
-            .replace(/&amp;/g, '&')
-            .trim()
-
-          resultText += `${content}\n\n`
+        resultText += `📋 목차 (총 ${articles.length}개 조문)\n\n`
+        resultText += tocItems.join("\n")
+        resultText += `\n\n💡 전체 내용이 길어 목차만 표시합니다.`
+        resultText += `\n💡 특정 조문 조회: get_law_text(mst="${input.ordinSeq}", jo="제XX조")`
+      } else {
+        for (const article of articles) {
+          if (article.조제목) {
+            resultText += `${article.조제목}\n`
+          }
+          if (article.조내용) {
+            resultText += `${cleanHtml(String(article.조내용))}\n\n`
+          }
         }
-      }
-
-      if (articles.length > maxArticles) {
-        resultText += `\n... 외 ${articles.length - maxArticles}개 조문 (생략)\n`
       }
     }
 

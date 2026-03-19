@@ -75,8 +75,9 @@ export async function compareOldNew(
       }
     }
 
+    // 구/신 조문을 쌍으로 매칭 (동일 인덱스 기반 — API가 대응 쌍을 순서대로 반환)
     const maxArticles = Math.max(oldArticles.length, newArticles.length)
-    const displayCount = Math.min(maxArticles, 10)
+    const displayCount = Math.min(maxArticles, 30)
 
     for (let i = 0; i < displayCount; i++) {
       const oldArticle = oldArticles[i]
@@ -85,21 +86,30 @@ export async function compareOldNew(
       const oldContent = oldArticle?.textContent?.trim() || ""
       const newContent = newArticle?.textContent?.trim() || ""
 
+      // 조문 번호 추출 시도
+      const articleNumMatch = (newContent || oldContent).match(/제\d+조(?:의\d+)?/)
+      const articleLabel = articleNumMatch ? articleNumMatch[0] : `조문 ${i + 1}`
+
       resultText += `\n━━━━━━━━━━━━━━━━━━━━━━\n`
-      resultText += `조문 ${i + 1}\n`
+      resultText += `${articleLabel}\n`
       resultText += `━━━━━━━━━━━━━━━━━━━━━━\n\n`
 
       if (oldContent) {
         resultText += `[개정 전]\n${oldContent}\n\n`
+      } else {
+        resultText += `[개정 전] (신설)\n\n`
       }
 
       if (newContent) {
         resultText += `[개정 후]\n${newContent}\n\n`
+      } else {
+        resultText += `[개정 후] (삭제)\n\n`
       }
     }
 
-    if (maxArticles > 10) {
-      resultText += `\n... 외 ${maxArticles - 10}개 조문 (생략)\n`
+    if (maxArticles > displayCount) {
+      resultText += `\n... 외 ${maxArticles - displayCount}개 조문 (생략)\n`
+      resultText += `💡 전체 ${maxArticles}개 조문 중 ${displayCount}개만 표시합니다.\n`
     }
 
     return {
