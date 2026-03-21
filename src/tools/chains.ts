@@ -64,43 +64,68 @@ async function callTool(
   }
 }
 
+/** 법령명이 아닌 부가 키워드 제거 (법제처 lawSearch API는 법령명 검색이므로) */
+const NON_LAW_NAME_RE = /\s*(과태료|절차|비용|처벌|기준|허가|신청|부과|근거|위반|방법|요건|조건|처분|수수료|신고|등록|면허|인가|승인|취소|정지|벌칙|벌금|과징금|이행강제금|시정명령|체계|구조|3단|판례|해석|개정|별표|시행령|시행규칙|서식|수입|수출|통관|반환|납부|감면|면제|제한|금지|의무|권리|자격|종류|기간|대상|범위|적용)\s*/g
+
+function stripNonLawKeywords(query: string): string {
+  return query.replace(NON_LAW_NAME_RE, " ").trim()
+}
+
+/** XML에서 법령 정보 파싱 */
+function parseLawXml(xmlText: string, max: number): LawInfo[] {
+  const lawRegex = /<law[^>]*>([\s\S]*?)<\/law>/g
+  const results: LawInfo[] = []
+  let match
+  while ((match = lawRegex.exec(xmlText)) !== null && results.length < max) {
+    const content = match[1]
+    const lawName = extractTag(content, "법령명한글")
+    if (!lawName) continue // 빈 법령명 제외
+    results.push({
+      lawName,
+      lawId: extractTag(content, "법령ID"),
+      mst: extractTag(content, "법령일련번호"),
+      lawType: extractTag(content, "법령구분명"),
+    })
+  }
+  return results
+}
+
 async function findLaws(
   apiClient: LawApiClient,
   query: string,
   apiKey?: string,
   max = 3
 ): Promise<LawInfo[]> {
+  // 1차: 원본 쿼리로 검색
+  let results: LawInfo[] = []
   try {
     const xmlText = await apiClient.searchLaw(query, apiKey)
-    const lawRegex = /<law[^>]*>([\s\S]*?)<\/law>/g
-    const results: LawInfo[] = []
+    results = parseLawXml(xmlText, max)
+  } catch { /* 2차 시도로 진행 */ }
 
-    let match
-    while ((match = lawRegex.exec(xmlText)) !== null && results.length < max) {
-      const content = match[1]
-      results.push({
-        lawName: extractTag(content, "법령명한글"),
-        lawId: extractTag(content, "법령ID"),
-        mst: extractTag(content, "법령일련번호"),
-        lawType: extractTag(content, "법령구분명"),
-      })
+  // 2차: 결과 없으면 부가 키워드 제거 후 재시도
+  if (results.length === 0) {
+    const stripped = stripNonLawKeywords(query)
+    if (stripped && stripped !== query) {
+      try {
+        const xmlText = await apiClient.searchLaw(stripped, apiKey)
+        results = parseLawXml(xmlText, max)
+      } catch { /* 빈 결과 반환 */ }
     }
-
-    // 쿼리와 법령명 관련도 기반 정렬 (정확 매칭 > 부분 매칭 > 나머지)
-    if (results.length > 1) {
-      const queryWords = query.replace(/\s*(시행령|시행규칙|별표|판례|개정|체계|3단|구조|절차|비용|처벌|기준|허가|신청)\s*/g, " ")
-        .trim().split(/\s+/).filter(w => w.length > 0)
-      results.sort((a, b) => {
-        const scoreA = scoreLawRelevance(a.lawName, query, queryWords)
-        const scoreB = scoreLawRelevance(b.lawName, query, queryWords)
-        return scoreB - scoreA
-      })
-    }
-
-    return results
-  } catch {
-    return []
   }
+
+  // 쿼리와 법령명 관련도 기반 정렬 (정확 매칭 > 부분 매칭 > 나머지)
+  if (results.length > 1) {
+    const queryWords = query.replace(NON_LAW_NAME_RE, " ")
+      .trim().split(/\s+/).filter(w => w.length > 0)
+    results.sort((a, b) => {
+      const scoreA = scoreLawRelevance(a.lawName, query, queryWords)
+      const scoreB = scoreLawRelevance(b.lawName, query, queryWords)
+      return scoreB - scoreA
+    })
+  }
+
+  return results
 }
 
 /** 쿼리 대비 법령명 관련도 점수 (높을수록 관련) */
@@ -127,6 +152,14 @@ function detectExpansions(query: string): ExpansionType[] {
   if (/판례|사례|판결|대법원/.test(query)) exp.push("precedent")
   if (/해석|유권해석|질의회신/.test(query)) exp.push("interpretation")
   return exp
+}
+
+/** 조례 쿼리에서 지역명·조례 키워드 제거 → 상위법 검색용 */
+function stripOrdinanceKeywords(query: string): string {
+  return query
+    .replace(/(?:서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)(?:시|도|특별시|광역시|특별자치시|특별자치도)?/g, "")
+    .replace(/\s*(조례|규칙|자치법규)\s*/g, " ")
+    .trim()
 }
 
 function detectDomain(query: string): DomainType | null {
@@ -400,9 +433,9 @@ export async function chainOrdinanceCompare(
   try {
     const parts = [`═══ 조례 비교 연구: ${input.query} ═══`]
 
-    // Step 1: 상위 법령 확인
-    const parentQuery = input.parentLaw || input.query
-    const laws = await findLaws(apiClient, parentQuery, input.apiKey, 2)
+    // Step 1: 상위 법령 확인 (조례/지역명은 법령 검색에서 제거)
+    const parentQuery = input.parentLaw || stripOrdinanceKeywords(input.query)
+    const laws = parentQuery ? await findLaws(apiClient, parentQuery, input.apiKey, 2) : []
 
     if (laws.length > 0) {
       const p = laws[0]
@@ -413,8 +446,9 @@ export async function chainOrdinanceCompare(
       if (!threeTier.isError) parts.push(sec("위임 체계 (법률·시행령·시행규칙)", threeTier.text))
     }
 
-    // Step 2: 조례 검색 (타 지자체)
-    const ordinances = await callTool(searchOrdinance, apiClient, { query: input.query, display: 20, apiKey: input.apiKey })
+    // Step 2: 조례 검색 — "조례"/"규칙" 제거 (이미 조례 DB에서 검색하므로)
+    const ordinanceQuery = input.query.replace(/\s*(조례|규칙|자치법규)\s*/g, " ").trim() || input.query
+    const ordinances = await callTool(searchOrdinance, apiClient, { query: ordinanceQuery, display: 20, apiKey: input.apiKey })
     if (!ordinances.isError) parts.push(sec("전국 자치법규 검색 결과", ordinances.text))
 
     // 키워드 확장
