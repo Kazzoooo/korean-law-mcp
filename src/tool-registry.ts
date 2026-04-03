@@ -714,6 +714,8 @@ export function registerTools(server: Server, apiClient: LawApiClient, profile: 
         isError: result.isError
       }
     } catch (error) {
+      console.error(`[CallTool] Error in ${name}:`, error instanceof Error ? error.message : error)
+      if (error instanceof Error && error.stack) console.error(error.stack)
       const errResult = formatToolError(error, name)
       return {
         content: errResult.content.map(c => ({ type: "text" as const, text: c.text })),
