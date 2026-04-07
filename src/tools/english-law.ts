@@ -129,16 +129,19 @@ export async function getEnglishLawText(
       throw new Error("Failed to parse JSON response from API");
     }
 
-    if (!data.ElawService) {
+    // API 응답 형식: ElawService (구형) 또는 Law (신형)
+    const law = data.ElawService || data.Law;
+    if (!law) {
       throw new Error("영문법령을 찾을 수 없거나 응답 형식이 올바르지 않습니다.");
     }
 
-    const law = data.ElawService;
+    // 신형 API: Law.InfSection에 기본정보, Law.JoSection.Jo[]에 조문
+    const inf = law.InfSection || {};
     const basic = {
-      영문법령명: law.영문법령명 || law.법령명_영문,
-      한글법령명: law.한글법령명 || law.법령명_한글,
-      시행일자: law.시행일자,
-      공포일자: law.공포일자,
+      영문법령명: law.영문법령명 || law.법령명_영문 || inf.lsNmEng,
+      한글법령명: law.한글법령명 || law.법령명_한글 || inf.lsNmKor,
+      시행일자: law.시행일자 || inf.ancYd,
+      공포일자: law.공포일자 || inf.ancYd,
       법령구분: law.법령구분,
       소관부처: law.소관부처,
     };
@@ -154,14 +157,15 @@ export async function getEnglishLawText(
     output += `  Law Type: ${basic.법령구분 || "N/A"}\n`;
     output += `  Competent Ministry: ${basic.소관부처 || "N/A"}\n\n`;
 
-    // Extract articles from the response
-    const articles = law.조문 || law.조문목록 || [];
+    // 조문 추출: ElawService 형식 또는 Law.JoSection.Jo[] 형식
+    const joSection = law.JoSection?.Jo;
+    const articles = law.조문 || law.조문목록 || (joSection ? (Array.isArray(joSection) ? joSection : [joSection]) : []);
     if (Array.isArray(articles) && articles.length > 0) {
       output += `Articles:\n\n`;
-      for (const article of articles.slice(0, 50)) { // Limit to first 50 articles
-        const articleNo = article.조문번호 || article.조번호 || "";
+      for (const article of articles.slice(0, 50)) {
+        const articleNo = article.조문번호 || article.조번호 || article.joNo || "";
         const articleTitle = article.조문제목_영문 || article.조문제목 || "";
-        const articleContent = article.조문내용_영문 || article.조문내용 || "";
+        const articleContent = article.조문내용_영문 || article.조문내용 || article.joCts || "";
 
         if (articleNo || articleTitle) {
           output += `Article ${articleNo}`;

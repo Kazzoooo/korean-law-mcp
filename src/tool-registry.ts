@@ -11,6 +11,7 @@ import type { McpTool } from "./lib/types.js"
 import { formatToolError } from "./lib/errors.js"
 import { type ToolProfile, filterToolsByProfile } from "./lib/tool-profiles.js"
 import { discoverTools, DiscoverToolsSchema, executeTool, ExecuteToolSchema, setAllToolsRef } from "./tools/meta-tools.js"
+import { searchDecisions, SearchDecisionsSchema, getDecisionText, GetDecisionTextSchema } from "./tools/unified-decisions.js"
 
 // Tool imports
 import { searchLaw, SearchLawSchema } from "./tools/search.js"
@@ -649,6 +650,20 @@ export const allTools: McpTool[] = [
     schema: ExecuteToolSchema,
     handler: executeTool
   },
+
+  // === 통합 도구 (v3) ===
+  {
+    name: "search_decisions",
+    description: "[통합검색] 판례·해석례·헌재·행심·조세심판·관세·공정위·개인정보위·노동위·권익위·소청심사·학칙·공사공단·공공기관·조약·영문법령 등 17개 도메인 통합 검색. domain 파라미터로 선택.",
+    schema: SearchDecisionsSchema,
+    handler: searchDecisions
+  },
+  {
+    name: "get_decision_text",
+    description: "[통합조회] 17개 도메인(판례·결정례·재결례·학칙·조약·영문법령 등) 전문 조회. domain+id로 지정.",
+    schema: GetDecisionTextSchema,
+    handler: getDecisionText
+  },
 ]
 
 /**
@@ -675,9 +690,17 @@ function toMcpInputSchema(schema: unknown) {
 }
 
 /**
- * 서버에 도구 등록
- * @param profile - "lite" (14개, 웹 클라이언트용) | "full" (전체, 기본값)
+ * v3 통합 프로필 — 14개 도구만 노출, 나머지는 execute_tool로 접근
  */
+const V3_EXPOSED = new Set([
+  "chain_full_research", "chain_law_system", "chain_action_basis",
+  "chain_dispute_prep", "chain_amendment_track", "chain_ordinance_compare",
+  "chain_procedure_detail", "chain_document_review",
+  "search_law", "get_law_text",
+  "search_decisions", "get_decision_text",
+  "discover_tools", "execute_tool",
+])
+
 // 이름 기반 O(1) 조회용 Map
 const toolMap = new Map<string, McpTool>()
 
@@ -689,8 +712,8 @@ export function registerTools(server: Server, apiClient: LawApiClient, profile: 
   // 메타 도구가 전체 도구 목록 참조할 수 있도록 주입
   setAllToolsRef(allTools)
 
-  // 프로필에 따라 노출할 도구 필터링
-  const exposedTools = filterToolsByProfile(allTools, profile)
+  // v3: 14개만 노출
+  const exposedTools = allTools.filter(t => V3_EXPOSED.has(t.name))
 
   // ListTools 핸들러 — 프로필에 맞는 도구만 노출
   server.setRequestHandler(ListToolsRequestSchema, async () => ({

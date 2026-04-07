@@ -112,11 +112,11 @@ export async function getAdminAppealText(
       throw new Error("Failed to parse JSON response from API");
     }
 
-    if (!data.DeccService && !data.행정심판례) {
+    if (!data.DeccService && !data.행정심판례 && !data.PrecService) {
       throw new Error("행정심판례를 찾을 수 없거나 응답 형식이 올바르지 않습니다.");
     }
 
-    const appeal = data.DeccService || data.행정심판례;
+    const appeal = data.DeccService || data.행정심판례 || data.PrecService;
 
     let output = `=== ${appeal.사건명 || "행정심판례"} ===\n\n`;
 
