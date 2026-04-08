@@ -6,6 +6,7 @@
 import { z } from "zod"
 import type { LawApiClient } from "../lib/api-client.js"
 import { getThreeTier } from "./three-tier.js"
+import { truncateResponse } from "../lib/schemas.js"
 import { formatToolError } from "../lib/errors.js"
 
 export const GetLawTreeSchema = z.object({
@@ -110,7 +111,7 @@ export async function getLawTree(
     return {
       content: [{
         type: "text",
-        text: output
+        text: truncateResponse(output)
       }]
     }
   } catch (error) {

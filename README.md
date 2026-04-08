@@ -14,7 +14,24 @@
 
 ---
 
-## v3.0.2 — Unified Architecture + Setup Wizard
+## v3.1.0 — Production Hardening
+
+프로덕션 리뷰 기반 20개 파일 수정. 잠재적 버그, 보안, 안정성 일괄 개선.
+
+- **truncateResponse 누락 일괄 수정** — 17개 도구에서 50KB 응답 제한 미적용 수정
+- **HTTP 서버 세션 제한** — MAX_SESSIONS=100 추가, 503 응답 (DoS 방어)
+- **CORS 와일드카드 경고** — 미설정 시 stderr 경고 로그 추가
+- **파라미터 오염 방어** — `search_decisions`/`get_decision_text`의 options에서 핵심 필드 덮어쓰기 차단
+- **체인 도구 안정성** — 인증 에러(401/403/429) 즉시 전파, findLaws 안전 래핑
+- **API 클라이언트** — throwIfError에서 response body 소비 (stream 리크 방지)
+- **CLI 개선** — REPL 모드 Ctrl+C 2회 강제종료 구현
+- **SSE 서버 제거** — 사용되지 않는 데드코드 삭제 (HTTP 서버가 SSE 스트리밍 지원)
+- **데드 코드/의존성 정리** — `zod-to-json-schema`, ordinance 힌트, `start:sse` script
+
+<details>
+<summary>v3.0.x 변경 이력</summary>
+
+**v3.0.2** — Unified Architecture + Setup Wizard
 
 법제처 41개 API를 89개 MCP 도구로 구조화했던 v2.
 v3는 같은 41개 API를 **14개 도구**로 재압축했습니다.
@@ -59,6 +76,8 @@ MCP 도구 설계에서 **도구 수 ≠ 기능 수**입니다.
 
 핵심 패턴: **Dispatch Table + Domain Enum**.
 기존 handler 함수는 한 줄도 수정하지 않았습니다.
+
+</details>
 
 <details>
 <summary>v2.x 변경 이력</summary>

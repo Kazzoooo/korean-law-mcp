@@ -108,17 +108,6 @@ export async function getOrdinance(
       }
     }
 
-    // 상위법령 동적 추천 (조례명 키워드 기반)
-    const name = (ordinance.자치법규명 || "").toLowerCase()
-    const parentLawHints: string[] = []
-    if (/휴직|병가|육아/.test(name)) parentLawHints.push('search_law(query="지방공무원법") → 제63조(휴직)')
-    if (/복무|근무/.test(name)) parentLawHints.push('search_law(query="지방공무원법") → 제48조(복무)')
-    if (/징계|파면|해임/.test(name)) parentLawHints.push('search_law(query="지방공무원법") → 제69조(징계)')
-    if (/수당|급여|보수/.test(name)) parentLawHints.push('search_law(query="지방공무원 보수규정")')
-    if (/임용|채용|승진|전보/.test(name)) parentLawHints.push('search_law(query="지방공무원 임용령")')
-
-    // 상위법령 안내 제거 (LLM이 이미 도구 목록을 알고 있음)
-
     return {
       content: [{
         type: "text",

@@ -108,7 +108,11 @@ async function findLaws(
   try {
     const xmlText = await apiClient.searchLaw(query, apiKey)
     results = parseLawXml(xmlText, max)
-  } catch { /* 2차 시도로 진행 */ }
+  } catch (e) {
+    // 인증/권한 에러는 재시도 무의미 — 즉시 전파
+    if (e instanceof Error && /429|401|403|API 키/.test(e.message)) throw e
+    /* 그 외 에러: 2차 시도로 진행 */
+  }
 
   // 2차: 결과 없으면 부가 키워드 제거 후 재시도
   if (results.length === 0) {
@@ -117,7 +121,9 @@ async function findLaws(
       try {
         const xmlText = await apiClient.searchLaw(stripped, apiKey)
         results = parseLawXml(xmlText, max)
-      } catch { /* 빈 결과 반환 */ }
+      } catch (e) {
+        if (e instanceof Error && /429|401|403|API 키/.test(e.message)) throw e
+      }
     }
   }
 
@@ -465,7 +471,8 @@ export async function chainOrdinanceCompare(
 
     // Step 3: 상위 1건 전문 자동 조회
     if (!ordinances.isError) {
-      const seqMatch = ordinances.text.match(/\[(\d+)\]/)
+      // 자치법규일련번호 추출: "[숫자]" 패턴 (search_ordinance 출력의 "[일련번호] 법규명" 형식)
+      const seqMatch = ordinances.text.match(/\[(\d{5,})\]/)
       if (seqMatch) {
         const fullText = await callTool(getOrdinance, apiClient, { ordinSeq: seqMatch[1], apiKey: input.apiKey })
         if (!fullText.isError) parts.push(sec("조례 전문 (상위 1건)", fullText.text))
@@ -502,9 +509,14 @@ export async function chainFullResearch(
     const parts = [`═══ 종합 리서치: ${input.query} ═══`]
 
     // Step 1: AI 검색 + 법령 검색 + 판례/해석 모두 병렬
+    // findLaws를 안전하게 래핑 (throw 시 Promise.all 전체 reject 방지)
+    const safeFindLaws = async (): Promise<LawInfo[]> => {
+      try { return await findLaws(apiClient, input.query, input.apiKey, 2) }
+      catch { return [] }
+    }
     const [aiResult, lawsResult, precResult, interpResult] = await Promise.all([
       callTool(searchAiLaw, apiClient, { query: input.query, display: 10, apiKey: input.apiKey }),
-      findLaws(apiClient, input.query, input.apiKey, 2),
+      safeFindLaws(),
       callTool(searchPrecedents, apiClient, { query: input.query, display: 5, apiKey: input.apiKey }),
       callTool(searchInterpretations, apiClient, { query: input.query, display: 5, apiKey: input.apiKey }),
     ])

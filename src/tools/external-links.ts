@@ -3,6 +3,7 @@
  */
 
 import { z } from "zod"
+import { truncateResponse } from "../lib/schemas.js"
 import { formatToolError } from "../lib/errors.js"
 
 export const ExternalLinksSchema = z.object({
@@ -121,7 +122,7 @@ export async function getExternalLinks(
     return {
       content: [{
         type: "text",
-        text: resultText
+        text: truncateResponse(resultText)
       }]
     }
   } catch (error) {

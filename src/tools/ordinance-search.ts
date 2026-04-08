@@ -6,6 +6,7 @@ import { z } from "zod"
 import type { LawApiClient } from "../lib/api-client.js"
 import { normalizeLawSearchText, expandOrdinanceQuery } from "../lib/search-normalizer.js"
 import { parseSearchXML, extractTag } from "../lib/xml-parser.js"
+import { truncateResponse } from "../lib/schemas.js"
 import { formatToolError } from "../lib/errors.js"
 
 export const SearchOrdinanceSchema = z.object({
@@ -110,7 +111,7 @@ export async function searchOrdinance(
     return {
       content: [{
         type: "text",
-        text: output
+        text: truncateResponse(output)
       }]
     }
   } catch (error) {

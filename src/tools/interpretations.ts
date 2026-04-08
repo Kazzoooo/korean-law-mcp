@@ -87,7 +87,7 @@ export async function searchInterpretations(
     return {
       content: [{
         type: "text",
-        text: output
+        text: truncateResponse(output)
       }]
     };
   } catch (error) {

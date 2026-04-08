@@ -33,8 +33,10 @@ export class LawApiClient {
   }
 
   /** HTTP 응답 검증 — 상태 코드 분류 + HTML 에러 페이지 감지 */
-  private throwIfError(response: Response, endpoint: string): void {
+  private async throwIfError(response: Response, endpoint: string): Promise<void> {
     if (!response.ok) {
+      // body stream 리크 방지: throw 전에 body consume
+      try { await response.text() } catch { /* ignore */ }
       const status = response.status
       if (status === 429) throw new Error(`API 요청 한도 초과 (429) - 잠시 후 다시 시도하세요.`)
       if (status >= 500) throw new Error(`법제처 서버 오류 (${status}) - ${endpoint}`)
@@ -75,7 +77,7 @@ export class LawApiClient {
 
     const url = `${LAW_API_BASE}/lawSearch.do?${params.toString()}`
     const response = await fetchWithRetry(url)
-    this.throwIfError(response, "searchLaw")
+    await this.throwIfError(response, "searchLaw")
 
     return await response.text()
   }
@@ -103,7 +105,7 @@ export class LawApiClient {
 
     const url = `${LAW_API_BASE}/lawService.do?${apiParams.toString()}`
     const response = await fetchWithRetry(url)
-    this.throwIfError(response, "getLawText")
+    await this.throwIfError(response, "getLawText")
 
     const text = await response.text()
 
@@ -137,7 +139,7 @@ export class LawApiClient {
 
     const url = `${LAW_API_BASE}/lawService.do?${apiParams.toString()}`
     const response = await fetchWithRetry(url)
-    this.throwIfError(response, "compareOldNew")
+    await this.throwIfError(response, "compareOldNew")
 
     return await response.text()
   }
@@ -163,7 +165,7 @@ export class LawApiClient {
 
     const url = `${LAW_API_BASE}/lawService.do?${apiParams.toString()}`
     const response = await fetchWithRetry(url)
-    this.throwIfError(response, "getThreeTier")
+    await this.throwIfError(response, "getThreeTier")
 
     return await response.text()
   }
@@ -187,7 +189,7 @@ export class LawApiClient {
 
     const url = `${LAW_API_BASE}/lawSearch.do?${apiParams.toString()}`
     const response = await fetchWithRetry(url)
-    this.throwIfError(response, "searchAdminRule")
+    await this.throwIfError(response, "searchAdminRule")
 
     return await response.text()
   }
@@ -205,7 +207,7 @@ export class LawApiClient {
 
     const url = `${LAW_API_BASE}/lawService.do?${apiParams.toString()}`
     const response = await fetchWithRetry(url)
-    this.throwIfError(response, "getAdminRule")
+    await this.throwIfError(response, "getAdminRule")
 
     const text = await response.text()
     this.checkHtmlError(text, "행정규칙을 찾을 수 없습니다. ID를 확인해주세요")
@@ -247,7 +249,7 @@ export class LawApiClient {
 
     const url = `${LAW_API_BASE}/lawSearch.do?${apiParams.toString()}`
     const response = await fetchWithRetry(url)
-    this.throwIfError(response, "getAnnexes")
+    await this.throwIfError(response, "getAnnexes")
 
     return await response.text()
   }
@@ -262,8 +264,8 @@ export class LawApiClient {
       return 'ordinance'
     }
 
-    // 시행령/시행규칙/령이 있으면 일반 법령
-    if (/(시행령|시행규칙|령)/.test(lawName)) {
+    // 시행령/시행규칙이 있으면 일반 법령 ("령"만으로는 판별 불가 — "복무규정", "관리령" 등 행정규칙 오분류 방지)
+    if (/시행령|시행규칙/.test(lawName)) {
       return 'law'
     }
 
@@ -294,7 +296,7 @@ export class LawApiClient {
 
     const url = `${LAW_API_BASE}/lawSearch.do?${apiParams.toString()}`
     const response = await fetchWithRetry(url)
-    this.throwIfError(response, "searchOrdinance")
+    await this.throwIfError(response, "searchOrdinance")
 
     return await response.text()
   }
@@ -313,7 +315,7 @@ export class LawApiClient {
 
     const url = `${LAW_API_BASE}/lawService.do?${apiParams.toString()}`
     const response = await fetchWithRetry(url)
-    this.throwIfError(response, "getOrdinance")
+    await this.throwIfError(response, "getOrdinance")
 
     const text = await response.text()
     this.checkHtmlError(text, "자치법규를 찾을 수 없습니다. ordinSeq를 확인해주세요")
@@ -350,7 +352,7 @@ export class LawApiClient {
 
     const url = `${LAW_API_BASE}/lawSearch.do?${apiParams.toString()}`
     const response = await fetchWithRetry(url)
-    this.throwIfError(response, "getArticleHistory")
+    await this.throwIfError(response, "getArticleHistory")
 
     return await response.text()
   }
@@ -380,7 +382,7 @@ export class LawApiClient {
 
     const url = `${LAW_API_BASE}/${params.endpoint}?${apiParams.toString()}`
     const response = await fetchWithRetry(url)
-    this.throwIfError(response, `fetchApi(${params.target})`)
+    await this.throwIfError(response, `fetchApi(${params.target})`)
 
     const text = await response.text()
     this.checkHtmlError(text, "API 응답 오류 - 파라미터를 확인해주세요")
@@ -411,7 +413,7 @@ export class LawApiClient {
 
     const url = `${LAW_API_BASE}/lawSearch.do?${apiParams.toString()}`
     const response = await fetchWithRetry(url)
-    this.throwIfError(response, "getLawHistory")
+    await this.throwIfError(response, "getLawHistory")
 
     return await response.text()
   }

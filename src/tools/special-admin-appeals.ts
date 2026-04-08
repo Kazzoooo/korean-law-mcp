@@ -67,7 +67,7 @@ async function searchSpecialAppeals(
     }
     output += `\n전문 조회: ${textToolName}(id="특별행정심판재결례일련번호")`;
 
-    return { content: [{ type: "text", text: output }] };
+    return { content: [{ type: "text", text: truncateResponse(output) }] };
   } catch (error) {
     return formatToolError(error, `search_${target}`);
   }

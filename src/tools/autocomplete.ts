@@ -6,6 +6,7 @@
 import { z } from "zod"
 import type { LawApiClient } from "../lib/api-client.js"
 import { searchLaw } from "./search.js"
+import { truncateResponse } from "../lib/schemas.js"
 import { formatToolError } from "../lib/errors.js"
 
 export const SuggestLawNamesSchema = z.object({
@@ -43,22 +44,24 @@ export async function suggestLawNames(
 
     const text = searchResult.content[0].text
 
-    // Parse search results to extract law names
+    // Parse search results to extract law names (정규식 기반 — 출력 포맷 변경에 안전)
     const lines = text.split('\n')
     const suggestions: Array<{ name: string; type: string }> = []
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]
-      // Match lines like "1. 관세법"
+    let currentName = ""
+    for (const line of lines) {
+      // 법령명 라인: "1. 관세법", "2. 관세법 시행령" 등
       const nameMatch = line.match(/^\d+\.\s+(.+)$/)
       if (nameMatch) {
-        const name = nameMatch[1].trim()
-        // Look ahead for the type line "   - 구분: 법률"
-        const typeLine = lines[i + 4] // 4 lines down: lawId, MST, promDate, lawType
-        const typeMatch = typeLine?.match(/구분:\s+(.+)/)
+        currentName = nameMatch[1].trim()
+        continue
+      }
+      // 구분 라인: "   - 구분: 법률" (법령명 이후 어느 위치든 매칭)
+      if (currentName) {
+        const typeMatch = line.match(/구분:\s+(.+)/)
         if (typeMatch) {
-          const type = typeMatch[1].trim()
-          suggestions.push({ name, type })
+          suggestions.push({ name: currentName, type: typeMatch[1].trim() })
+          currentName = ""
         }
       }
     }
@@ -117,7 +120,7 @@ export async function suggestLawNames(
     return {
       content: [{
         type: "text",
-        text: output
+        text: truncateResponse(output)
       }]
     }
   } catch (error) {

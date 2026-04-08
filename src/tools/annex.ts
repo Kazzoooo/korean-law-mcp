@@ -291,7 +291,7 @@ function formatAnnexList(
   resultText += `\n[주의] 별표 내용을 확인하려면 이 도구(get_annexes)를 bylSeq 파라미터와 함께 다시 호출하세요.\n예: get_annexes({ lawName: "${normalizedLawName}", bylSeq: "${annexList[0]?.별표번호 || '000100'}" })`
   resultText += `\n커넥터에서 bylSeq 입력이 제한되면 lawName에 별표번호를 함께 넣어 호출할 수 있습니다.\n예: get_annexes({ lawName: "${normalizedLawName} 별표4" })`
 
-  return { content: [{ type: "text", text: resultText }] }
+  return { content: [{ type: "text", text: truncateResponse(resultText) }] }
 }
 
 /**

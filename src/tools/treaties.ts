@@ -2,6 +2,7 @@ import { z } from "zod"
 import type { LawApiClient } from "../lib/api-client.js"
 import { parseTreatyXML } from "../lib/xml-parser.js"
 import { truncateResponse } from "../lib/schemas.js"
+import { formatToolError } from "../lib/errors.js"
 
 export const searchTreatiesSchema = z.object({
   query: z.string().optional().describe("검색 키워드 (예: '투자보장', '범죄인인도')"),
@@ -72,8 +73,7 @@ export async function searchTreaties(
 
     return { content: [{ type: "text", text: truncateResponse(output) }] }
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error)
-    return { content: [{ type: "text", text: `Error: ${msg}` }], isError: true }
+    return formatToolError(error as Error, "treaties")
   }
 }
 
@@ -150,7 +150,6 @@ export async function getTreatyText(
       }]
     }
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error)
-    return { content: [{ type: "text", text: `Error: ${msg}` }], isError: true }
+    return formatToolError(error as Error, "treaties")
   }
 }

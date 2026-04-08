@@ -136,8 +136,9 @@ async function searchByType(
 
       results.push({ name, id, type, date })
     }
-  } catch {
-    // 검색 실패 시 빈 배열 반환
+  } catch (e) {
+    // 인증/권한 에러는 전파, 그 외는 빈 배열 (부분 실패 허용)
+    if (e instanceof Error && /429|401|403|API 키/.test(e.message)) throw e
   }
 
   return results

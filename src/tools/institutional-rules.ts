@@ -93,7 +93,7 @@ async function searchRules(
     }
     output += `\n전문 조회: ${textToolName}(id="일련번호")`;
 
-    return { content: [{ type: "text", text: output }] };
+    return { content: [{ type: "text", text: truncateResponse(output) }] };
   } catch (error) {
     return formatToolError(error, `search_${target}_rules`);
   }

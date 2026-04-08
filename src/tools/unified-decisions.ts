@@ -158,9 +158,12 @@ export async function searchDecisions(
     if (input.sort) args.sort = input.sort
     if (input.apiKey) args.apiKey = input.apiKey
 
-    // 도메인별 추가 옵션 병합
+    // 도메인별 추가 옵션 병합 (핵심 필드 덮어쓰기 방지)
     if (input.options) {
-      Object.assign(args, input.options)
+      const reserved = new Set(["query", "display", "page", "sort", "apiKey", "domain"])
+      for (const [k, v] of Object.entries(input.options)) {
+        if (!reserved.has(k)) args[k] = v
+      }
     }
 
     return await handler(apiClient, args)
@@ -209,9 +212,12 @@ export async function getDecisionText(
 
     if (input.apiKey) args.apiKey = input.apiKey
 
-    // 도메인별 추가 옵션 병합
+    // 도메인별 추가 옵션 병합 (핵심 필드 덮어쓰기 방지)
     if (input.options) {
-      Object.assign(args, input.options)
+      const reserved = new Set(["id", "apiKey", "domain"])
+      for (const [k, v] of Object.entries(input.options)) {
+        if (!reserved.has(k)) args[k] = v
+      }
     }
 
     return await handler(apiClient, args)

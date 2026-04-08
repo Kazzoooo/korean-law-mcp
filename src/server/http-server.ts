@@ -20,6 +20,7 @@ interface SessionInfo {
 }
 
 // 세션 맵
+const MAX_SESSIONS = 100
 const sessions = new Map<string, SessionInfo>()
 
 export async function startHTTPServer(createServer: (profile?: ToolProfile) => Server, port: number) {
@@ -78,8 +79,11 @@ export async function startHTTPServer(createServer: (profile?: ToolProfile) => S
     }, 5 * 60 * 1000).unref()
   }
 
-  // CORS 및 보안 헤더 설정
+  // CORS 및 보안 헤더 설정 (CORS_ORIGIN 미설정 시 경고)
   const corsOrigin = process.env.CORS_ORIGIN || "*"
+  if (corsOrigin === "*") {
+    console.error("⚠️  CORS_ORIGIN 미설정 — 모든 도메인 허용 중. 프로덕션에서는 CORS_ORIGIN 환경변수를 설정하세요.")
+  }
   app.use((req, res, next) => {
     // CORS
     res.header("Access-Control-Allow-Origin", corsOrigin)
@@ -129,7 +133,6 @@ export async function startHTTPServer(createServer: (profile?: ToolProfile) => S
       req.headers["apikey"] ||
       req.headers["law_oc"] ||
       req.headers["law-oc"] ||
-      (req.headers["LAW_OC"] as string | undefined) ||
       req.headers["x-api-key"] ||
       req.headers["authorization"]?.replace(/^Bearer\s+/i, "") ||
       req.headers["x-law-oc"]
@@ -170,6 +173,15 @@ export async function startHTTPServer(createServer: (profile?: ToolProfile) => S
         })
         return
       } else if (!sessionId && isInitializeRequest(req.body)) {
+        // 세션 수 제한 — transport 생성 전에 체크하여 리소스 누수 방지
+        if (sessions.size >= MAX_SESSIONS) {
+          res.status(503).json({
+            jsonrpc: "2.0",
+            error: { code: -32000, message: `Max sessions (${MAX_SESSIONS}) reached. Try again later.` },
+            id: null,
+          })
+          return
+        }
         // 새 세션 초기화 — URL 쿼리파라미터에서 프로필 결정
         const profile = parseProfile(req.query.profile as string | undefined)
         console.error(`[POST /mcp] New initialization request (profile: ${profile})`)

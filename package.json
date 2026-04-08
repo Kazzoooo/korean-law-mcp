@@ -1,6 +1,6 @@
 {
   "name": "korean-law-mcp",
-  "version": "3.0.2",
+  "version": "3.1.0",
   "description": "법제처 41개 API → 14개 MCP 도구. 법령·판례·조례·조약을 AI로 검색·조회·분석",
   "type": "module",
   "main": "build/index.js",
@@ -31,7 +31,6 @@
     "build": "tsc",
     "watch": "tsc --watch",
     "start": "node build/index.js",
-    "start:sse": "node build/index.js --mode sse --port 3000",
     "cli": "node build/cli.js",
     "prepublishOnly": "npm run build"
   },
@@ -57,8 +56,7 @@
     "express": "^5.2.1",
     "kordoc": "^2.1.0",
     "pdfjs-dist": "^5.5.207",
-    "zod": "^3.25.76 || ^4.0.0",
-    "zod-to-json-schema": "^3.25.1"
+    "zod": "^3.25.76 || ^4.0.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

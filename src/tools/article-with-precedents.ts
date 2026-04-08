@@ -6,6 +6,7 @@ import { z } from "zod"
 import type { LawApiClient } from "../lib/api-client.js"
 import { getLawText, GetLawTextInput } from "./law-text.js"
 import { searchPrecedents } from "./precedents.js"
+import { truncateResponse } from "../lib/schemas.js"
 import { formatToolError } from "../lib/errors.js"
 
 export const GetArticleWithPrecedentsSchema = z.object({
@@ -79,7 +80,7 @@ export async function getArticleWithPrecedents(
     return {
       content: [{
         type: "text",
-        text: resultText
+        text: truncateResponse(resultText)
       }]
     }
   } catch (error) {

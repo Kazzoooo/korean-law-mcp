@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Korean Law MCP Server v3.0.2 - 법제처 41개 API → 14개 통합 도구 (내부 91개) + 자연어 CLI
+Korean Law MCP Server v3.1.0 - 법제처 41개 API → 14개 통합 도구 (내부 91개) + 자연어 CLI
 
 ## Structure
 
@@ -31,9 +31,8 @@ src/
 │   ├── date-parser.ts    # 자연어 날짜 파서
 │   ├── document-analysis.ts  # 문서유형 분류/금액추출/리스크 탐지
 │   └── types.ts          # 공통 타입
-└── server/               # HTTP/SSE 서버 (Express)
-    ├── http-server.ts    # Streamable HTTP (MCP 표준, 100kb body limit)
-    └── sse-server.ts     # SSE 서버 (레거시, 세션 클린업)
+└── server/               # HTTP 서버 (Express)
+    └── http-server.ts    # Streamable HTTP (MCP 표준, 100kb body limit, MAX_SESSIONS=100)
 ```
 
 ## Commands

@@ -62,7 +62,7 @@ export async function getLegalTermKB(
       output += `\n`;
     }
 
-    return { content: [{ type: "text", text: output }] };
+    return { content: [{ type: "text", text: truncateResponse(output) }] };
   } catch (error) {
     return formatToolError(error, "get_legal_term_kb");
   }
@@ -117,7 +117,7 @@ export async function getLegalTermDetail(
       output += `분류: ${code}\n`;
     }
 
-    return { content: [{ type: "text", text: output }] };
+    return { content: [{ type: "text", text: truncateResponse(output) }] };
   } catch (error) {
     return formatToolError(error, "get_legal_term_detail");
   }
@@ -172,7 +172,7 @@ export async function getDailyTerm(
       output += `\n`;
     }
 
-    return { content: [{ type: "text", text: output }] };
+    return { content: [{ type: "text", text: truncateResponse(output) }] };
   } catch (error) {
     return formatToolError(error, "get_daily_term");
   }
@@ -218,7 +218,7 @@ export async function getDailyToLegal(
       output += `   • ${item.법령용어명 || item.연계용어명}\n`;
     }
 
-    return { content: [{ type: "text", text: output }] };
+    return { content: [{ type: "text", text: truncateResponse(output) }] };
   } catch (error) {
     return formatToolError(error, "get_daily_to_legal");
   }
@@ -264,7 +264,7 @@ export async function getLegalToDaily(
       output += `   • ${item.일상용어명 || item.연계용어명}\n`;
     }
 
-    return { content: [{ type: "text", text: output }] };
+    return { content: [{ type: "text", text: truncateResponse(output) }] };
   } catch (error) {
     return formatToolError(error, "get_legal_to_daily");
   }

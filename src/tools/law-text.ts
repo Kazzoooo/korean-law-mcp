@@ -9,7 +9,7 @@ import { lawCache } from "../lib/cache.js"
 import { formatArticleUnit } from "../lib/article-parser.js"
 import { formatToolError } from "../lib/errors.js"
 
-import { MAX_RESPONSE_SIZE } from "../lib/schemas.js"
+import { MAX_RESPONSE_SIZE, truncateResponse } from "../lib/schemas.js"
 
 export const GetLawTextSchema = z.object({
   mst: z.string().optional().describe("법령일련번호 (search_law에서 획득)"),
@@ -196,7 +196,7 @@ export async function getLawText(
       return {
         content: [{
           type: "text",
-          text: tocText
+          text: truncateResponse(tocText)
         }]
       }
     }

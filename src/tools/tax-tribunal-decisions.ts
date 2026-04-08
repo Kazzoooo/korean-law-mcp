@@ -78,7 +78,7 @@ export async function searchTaxTribunalDecisions(
     return {
       content: [{
         type: "text",
-        text: output
+        text: truncateResponse(output)
       }]
     };
   } catch (error) {
