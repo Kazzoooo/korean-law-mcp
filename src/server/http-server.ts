@@ -27,22 +27,26 @@ export async function startHTTPServer(createServer: (profile?: ToolProfile) => S
   const app = express()
   app.use(express.json({ limit: "100kb" }))
 
-  // 30분 idle 세션 자동 정리 (5분마다 체크)
-  const SESSION_MAX_IDLE = 30 * 60 * 1000 // 30분
+  // 10분 idle 세션 자동 정리 (2분마다 체크)
+  const SESSION_MAX_IDLE = 10 * 60 * 1000 // 10분
   setInterval(() => {
     const now = Date.now()
+    let cleaned = 0
     for (const [sessionId, session] of sessions) {
       if (now - session.lastAccess > SESSION_MAX_IDLE) {
-        console.error(`[Session Cleanup] Removing idle session: ${sessionId}`)
         try {
           session.transport.close()
           session.server.close().catch(() => {})
         } catch { /* ignore */ }
         sessions.delete(sessionId)
         deleteSession(sessionId)
+        cleaned++
       }
     }
-  }, 5 * 60 * 1000).unref()
+    if (cleaned > 0) {
+      console.error(`[Session Cleanup] Removed ${cleaned} idle sessions (remaining: ${sessions.size})`)
+    }
+  }, 2 * 60 * 1000).unref()
 
   // Rate Limiting (RATE_LIMIT_RPM 환경변수, 기본: 60 req/min per IP)
   const rateLimitRpm = parseInt(process.env.RATE_LIMIT_RPM || "60", 10)
