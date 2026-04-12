@@ -690,13 +690,23 @@ function toMcpInputSchema(schema: unknown) {
 }
 
 /**
- * v3 통합 프로필 — 14개 도구만 노출, 나머지는 execute_tool로 접근
+ * v3 통합 프로필 — 15개 도구 노출, 나머지는 execute_tool로 접근
+ *
+ * 노출 기준:
+ *   1) 체인 도구가 fallback으로 자주 호출하는 종착 도구
+ *   2) discover_tools → execute_tool 왕복으로 평균 5초+ 손실 발생
+ *   3) 그 외는 execute_tool 경유 유지
+ *
+ * ⚠️ get_annexes 제거 금지:
+ *   헬스장 환불 케이스(trace ld-1775959823220, 79s)에서 별표 3의2를 가져오기 위해
+ *   discover_tools × 2 + execute_tool 헛발질로 ~15초 손실. 직노출로 해결.
  */
 const V3_EXPOSED = new Set([
   "chain_full_research", "chain_law_system", "chain_action_basis",
   "chain_dispute_prep", "chain_amendment_track", "chain_ordinance_compare",
   "chain_procedure_detail", "chain_document_review",
   "search_law", "get_law_text",
+  "get_annexes",
   "search_decisions", "get_decision_text",
   "discover_tools", "execute_tool",
 ])

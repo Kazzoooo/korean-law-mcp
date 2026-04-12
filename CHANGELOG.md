@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.2.2] - 2026-04-12
+
+### Added
+- `get_annexes`를 V3_EXPOSED에 추가 (14개 → 15개 노출). `discover_tools` → `execute_tool` 왕복 없이 별표/서식 직접 조회 가능
+- `chains.ts` `detectExpansions`: 환불·반환·배상·수강료·이용료·회비·N만원 키워드 추가 — 소비자분쟁 질의에서 `chain_full_research`가 별표 자동 포함
+
+### Why
+- 트레이스 `ld-1775959823220` (헬스장 1년권 환불, 79s) 분석 결과: 별표 3의2 조회를 위해 `discover_tools` × 2 + `execute_tool(get_annexes(...))` 헛발질로 ~15초 손실
+- 노출 기준: 체인 도구가 fallback으로 자주 호출하는 종착 도구 + discover→execute 왕복으로 5초+ 손실
+- `tool-registry.ts` 상단 주석에 제거 금지 경고 명시
+
 ## [3.0.2] - 2026-04-08
 
 ### Added

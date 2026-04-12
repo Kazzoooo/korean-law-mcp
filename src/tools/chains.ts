@@ -181,7 +181,10 @@ function scoreLawRelevance(lawName: string, query: string, queryWords: string[])
 
 function detectExpansions(query: string): ExpansionType[] {
   const exp: ExpansionType[] = []
-  if (/수수료|과태료|요금|금액|벌금|과징금|벌칙/.test(query)) exp.push("annex_fee")
+  // 환불/반환/배상/수강료 등 소비자분쟁 관련 금액 키워드 확장
+  // 헬스장 환불 케이스(trace ld-1775959823220)에서 "환불"·"120만원"이 미매치로 별표 누락 → 추가
+  // 과매칭 방지: "\d+원"과 "기준/요율/비율/산정" 같은 광범위 키워드는 제외
+  if (/수수료|과태료|요금|금액|벌금|과징금|벌칙|환불|반환|환급|배상|보상|수강료|이용료|회비|\d+\s*만\s*원/.test(query)) exp.push("annex_fee")
   if (/서식|신청서|양식|별지|신고서/.test(query)) exp.push("annex_form")
   if (/별표|기준표|산정기준/.test(query)) exp.push("annex_table")
   if (/판례|사례|판결|대법원/.test(query)) exp.push("precedent")
