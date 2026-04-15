@@ -1,5 +1,38 @@
 # Changelog
 
+## [3.4.0] - 2026-04-16
+
+### Added
+- `lib/decision-compact.ts` — 판례/헌재/행심 응답 토큰 최적화 유틸 신규:
+  - `compactBody(text, opts)` — 본문 계단식 축약 (앞 800자 + 중략 + 뒤 400자, 문장 경계 가드)
+  - `densifyLawRefs(text)` — 참조조문 괄호 설명 제거 + 구분자 정리
+  - `densifyPrecedentRefs(text)` — 참조판례 "선고/판결" 제거 + 날짜 공백 압축
+  - `stripRepeatedSummary(body, summaries)` — 본문 앞쪽에 반복 기재된 판시/요지 제거
+- `get_decision_text`에 `full?: boolean` 파라미터 추가 — `true`=전문 그대로, 미지정(기본)=축약
+- 개별 핸들러(`get_precedent_text`, `get_constitutional_decision_text`, `get_admin_appeal_text`)에도 동일 파라미터 전파
+
+### Changed
+- **판례 응답 토큰 평균 -74%** (실측: `b4875a3` vs `69f6918`, 3개 도메인 × 8건 고정 ID):
+  - 판례: 5,230 → 3,049 chars (-42%)
+  - 헌재: 8,368 → 1,703 chars (-80%)
+  - 행심: 8,429 → 1,491 chars (-82%)
+  - 긴 결정례(15,000자 이상)에서 80~89% 절감 — 판시/요지/주문은 full 유지, 본문만 축약
+- **ListTools 페이로드 -14%** (9,671 → 8,296 bytes, 344 토큰↓):
+  - `chain_*` 8개 description 간결화 (`[⛓체인]` → `[⛓]`, 예시 구문/메타 문구 제거)
+  - `search_decisions`/`get_decision_text` 필드 describe 다이어트 (17 도메인 이중 기재 제거)
+  - `discover_tools`/`execute_tool` description 축약
+
+### Why
+- 3개 MCP 동시 운용 환경에서 판례 호출 1회가 12.5k 토큰 상한(50KB)을 먹어 컨텍스트 블랙홀화
+- 법령 RAG 관점에서 판시사항·판결요지·주문은 규범 재사용 핵심이라 full 유지, "이유" 전문은 사안별 사실관계 나열이라 축약해도 손실 미미
+- 중략된 구간은 `full=true`로 재호출 가능 — backward compatible
+
+### How to apply
+- 적용 도메인: `precedent`, `constitutional`, `admin_appeal` (판례/헌재/행심)
+- 해석례·기타 짧은 도메인은 미적용 (원래 짧음)
+- 사용자는 자연어로 "전문 그대로", "full로 다시"라고 요청하거나 LLM이 description 보고 자동 판단
+- 응답 중간의 `⋯ 중략 N자 (full=true로 전문 조회) ⋯` 마커가 힌트
+
 ## [3.2.2] - 2026-04-12
 
 ### Added
