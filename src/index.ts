@@ -2,29 +2,21 @@
 
 /**
  * Korean Law MCP Server
- * 국가법령정보센터 API 기반 MCP 서버
+ * 국가 법령정보센터 API 기반 MCP 서버
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
-import { LawApiClient } from "./lib/api-client.js"
-import { registerTools } from "./tool-registry.js"
 import { startHTTPServer } from "./server/http-server.js"
-import { VERSION } from "./version.js"
 import { type ToolProfile, parseProfile } from "./lib/tool-profiles.js"
+import { createMcpServer } from "./create-server.js"
 
 // API 클라이언트 초기화 (LAW_OC 또는 KOREAN_LAW_API_KEY 지원)
 const LAW_OC = process.env.LAW_OC || process.env.KOREAN_LAW_API_KEY || ""
-const apiClient = new LawApiClient({ apiKey: LAW_OC })
 
 // MCP 서버 팩토리 (HTTP 모드: 세션마다 새 인스턴스 필요)
 function createServer(profile?: ToolProfile): Server {
-  const s = new Server(
-    { name: "korean-law", version: VERSION },
-    { capabilities: { tools: {} } }
-  )
-  registerTools(s, apiClient, profile ?? "full")
-  return s
+  return createMcpServer({ profile, apiKey: LAW_OC })
 }
 
 // 서버 시작

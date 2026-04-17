@@ -1,0 +1,14 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "korean-law-mcp",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-04-17",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "vars": {
+    "RATE_LIMIT_RPM": "60",
+    "CORS_ORIGIN": "*",
+    "MCP_PROFILE": "full"
+  }
+}
