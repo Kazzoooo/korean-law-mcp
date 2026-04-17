@@ -12,14 +12,26 @@ interface CacheEntry<T> {
 export class SimpleCache {
   private cache: Map<string, CacheEntry<any>>
   private maxSize: number
+  private lastCleanupAt: number
 
   constructor(maxSize: number = 100) {
     this.cache = new Map()
     this.maxSize = maxSize
+    this.lastCleanupAt = 0
+  }
+
+  private maybeCleanup(now: number = Date.now()): void {
+    const CLEANUP_INTERVAL_MS = 60 * 60 * 1000
+    if (now - this.lastCleanupAt < CLEANUP_INTERVAL_MS) {
+      return
+    }
+    this.lastCleanupAt = now
+    this.cleanup(now)
   }
 
   set<T>(key: string, data: T, ttl: number = 24 * 60 * 60 * 1000): void {
     // TTL default: 24 hours
+    this.maybeCleanup()
 
     // If cache is full, evict expired entries first, then oldest
     if (this.cache.size >= this.maxSize && !this.cache.has(key)) {
@@ -53,6 +65,7 @@ export class SimpleCache {
   }
 
   get<T>(key: string): T | null {
+    this.maybeCleanup()
     const entry = this.cache.get(key)
 
     if (!entry) {
@@ -74,6 +87,7 @@ export class SimpleCache {
   }
 
   has(key: string): boolean {
+    this.maybeCleanup()
     const entry = this.cache.get(key)
     if (!entry) return false
 
@@ -100,8 +114,7 @@ export class SimpleCache {
   }
 
   // Clean up expired entries
-  cleanup(): void {
-    const now = Date.now()
+  cleanup(now: number = Date.now()): void {
     for (const [key, entry] of this.cache.entries()) {
       if (now - entry.timestamp > entry.ttl) {
         this.cache.delete(key)
@@ -114,8 +127,3 @@ export class SimpleCache {
 // 64개 도구 × 다양한 쿼리 조합 → maxSize=100은 빈번한 eviction 유발
 // 법령 데이터는 변경 빈도가 낮아 캐시 적중률이 높으므로 넉넉하게 설정
 export const lawCache = new SimpleCache(500)
-
-// Cleanup expired entries every hour
-setInterval(() => {
-  lawCache.cleanup()
-}, 60 * 60 * 1000).unref()

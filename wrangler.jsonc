@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "korean-law-mcp",
+  "name": "kazzoooo-korean-law-mcp",
   "main": "src/worker.ts",
   "compatibility_date": "2026-04-17",
   "compatibility_flags": [
