@@ -8,8 +8,7 @@
  * @see https://github.com/chrisryugj/kordoc
  */
 
-import { parse } from "kordoc"
-import type { ParseResult, FileType } from "kordoc"
+import type { FileType } from "kordoc"
 
 // ─── 기존 인터페이스 호환 ────────────────────────────
 
@@ -27,7 +26,8 @@ export interface AnnexParseResult {
 // ─── 메인 엔트리 ─────────────────────────────────────
 
 export async function parseAnnexFile(buffer: ArrayBuffer): Promise<AnnexParseResult> {
-  const result: ParseResult = await parse(buffer)
+  const { parse } = await import("kordoc")
+  const result = await parse(buffer)
 
   if (result.success) {
     return {
