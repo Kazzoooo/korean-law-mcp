@@ -6,7 +6,7 @@ import { normalizeLawSearchText, resolveLawAlias } from "./search-normalizer.js"
 import { fetchWithRetry } from "./fetch-with-retry.js"
 import { requestContext } from "./session-state.js"
 
-const LAW_API_BASE = "https://www.law.go.kr/DRF"
+const LAW_API_BASE = process.env.LAW_API_BASE || "http://www.law.go.kr/DRF"
 
 export class LawApiClient {
   private defaultApiKey: string
