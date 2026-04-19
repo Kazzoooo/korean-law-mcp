@@ -13,6 +13,17 @@ import { requestContext } from "../lib/session-state.js"
 import { VERSION } from "../version.js"
 import { type ToolProfile, parseProfile } from "../lib/tool-profiles.js"
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+function redactSecret(value: string, secret: string): string {
+  if (!secret) return value
+  return value
+    .replace(new RegExp(escapeRegExp(secret), "g"), "[REDACTED]")
+    .replace(new RegExp(escapeRegExp(encodeURIComponent(secret)), "g"), "[REDACTED]")
+}
+
 export async function startHTTPServer(createServer: (profile?: ToolProfile) => Server, port: number) {
   const app = express()
   // Fly.io proxy 뒤에서 실제 클라이언트 IP 인식 (rate limit per-IP 정상 동작)
@@ -93,6 +104,59 @@ export async function startHTTPServer(createServer: (profile?: ToolProfile) => S
 
   app.get("/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() })
+  })
+
+  app.get("/debug/law-search", async (req, res) => {
+    const query = typeof req.query.query === "string" ? req.query.query : "민법"
+    const protocol = req.query.protocol === "https" ? "https" : "http"
+    const apiKey = process.env.LAW_OC || process.env.KOREAN_LAW_API_KEY || ""
+
+    if (!apiKey) {
+      res.status(500).json({
+        ok: false,
+        error: "LAW_OC or KOREAN_LAW_API_KEY is not configured.",
+      })
+      return
+    }
+
+    const base = process.env.LAW_API_BASE || `${protocol}://www.law.go.kr/DRF`
+    const targetUrl = new URL(`${base}/lawSearch.do`)
+    targetUrl.searchParams.set("OC", apiKey)
+    targetUrl.searchParams.set("target", "law")
+    targetUrl.searchParams.set("type", "XML")
+    targetUrl.searchParams.set("query", query)
+
+    try {
+      const response = await fetch(targetUrl.toString(), {
+        method: "GET",
+        headers: {
+          "User-Agent": "korean-law-mcp-node/3.4.0",
+          "Accept": "application/xml,text/xml;q=0.9,*/*;q=0.1",
+        },
+      })
+      const body = await response.text()
+      res.status(response.ok ? 200 : 502).json({
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+        protocol,
+        query,
+        base,
+        targetUrl: redactSecret(targetUrl.toString(), apiKey),
+        contentType: response.headers.get("content-type"),
+        server: response.headers.get("server"),
+        bodyPreview: redactSecret(body.slice(0, 500), apiKey),
+      })
+    } catch (error) {
+      res.status(502).json({
+        ok: false,
+        protocol,
+        query,
+        base,
+        targetUrl: redactSecret(targetUrl.toString(), apiKey),
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
   })
 
   // POST /mcp - stateless 요청 처리
