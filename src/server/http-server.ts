@@ -24,6 +24,35 @@ function redactSecret(value: string, secret: string): string {
     .replace(new RegExp(escapeRegExp(encodeURIComponent(secret)), "g"), "[REDACTED]")
 }
 
+function describeError(error: unknown): Record<string, unknown> {
+  if (!(error instanceof Error)) {
+    return { message: String(error) }
+  }
+
+  const details: Record<string, unknown> = {
+    name: error.name,
+    message: error.message,
+    stack: error.stack,
+  }
+
+  const cause = (error as Error & { cause?: unknown }).cause
+  if (cause && typeof cause === "object") {
+    const causeRecord = cause as Record<string, unknown>
+    details.cause = {
+      name: causeRecord.name,
+      message: causeRecord.message,
+      code: causeRecord.code,
+      errno: causeRecord.errno,
+      syscall: causeRecord.syscall,
+      hostname: causeRecord.hostname,
+      address: causeRecord.address,
+      port: causeRecord.port,
+    }
+  }
+
+  return details
+}
+
 export async function startHTTPServer(createServer: (profile?: ToolProfile) => Server, port: number) {
   const app = express()
   // Fly.io proxy 뒤에서 실제 클라이언트 IP 인식 (rate limit per-IP 정상 동작)
@@ -148,13 +177,14 @@ export async function startHTTPServer(createServer: (profile?: ToolProfile) => S
         bodyPreview: redactSecret(body.slice(0, 500), apiKey),
       })
     } catch (error) {
+      console.error("[GET /debug/law-search] Error:", error)
       res.status(502).json({
         ok: false,
         protocol,
         query,
         base,
         targetUrl: redactSecret(targetUrl.toString(), apiKey),
-        error: error instanceof Error ? error.message : String(error),
+        error: describeError(error),
       })
     }
   })
